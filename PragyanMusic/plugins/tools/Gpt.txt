@@ -1,0 +1,97 @@
+import time
+from AashikaMusicBot import app
+from pyrogram.enums import ChatAction, ParseMode
+from pyrogram import filters
+from openai import OpenAI
+#apikeysk-fjYDBFOVwIoVyPdNBxcvT3BlbkFJaTyRKfXuIz16we1cF1fg
+
+# Initialize the OpenAI clients with your API key and endpoint
+openai_llama = OpenAI(
+    api_key="",  # Replace with your actual secret key
+    base_url="https://cloud.olakrutrim.com/v1",  # Krutrim API endpoint
+)
+
+openai_mistral = OpenAI(
+    api_key="",  # API key for Mistral-7B-Instruct
+    base_url="https://cloud.olakrutrim.com/v1",  # Krutrim API endpoint
+)
+
+# Define the chat completion function for the Mistral-7B-Instruct model
+async def get_mistral_response(user_query):
+    try:
+        chat_completion = openai_mistral.chat.completions.create(
+            model="Mistral-7B-Instruct",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": user_query}
+            ],
+        )
+        return chat_completion.choices[0].message['content']
+    except Exception as e:
+        return f"Error during API call: {e}"
+
+# Define the chat completion function for the Meta-Llama-3-8B-Instruct model
+async def get_llama_response(user_query):
+    try:
+        chat_completion = openai_llama.ChatCompletion.create(
+            model="Meta-Llama-3-8B-Instruct",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": user_query}
+            ],
+            max_tokens=8000,
+            temperature=0.7,
+        )
+        return chat_completion.choices[0].message['content']
+    except Exception as e:
+        return f"Error during API call: {e}"
+
+# Handler for the .meta command using Meta-Llama-3-8B-Instruct model
+@app.on_message(filters.command(["meta"],  prefixes=["+", ".", "/", "-", "", "$","#","&"]))
+async def meta_command(bot, message):
+    try:
+        start_time = time.time()
+        await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
+
+        if len(message.command) < 2:
+            await message.reply_text(
+                "Example:\n\n.meta Where is the Taj Mahal?"
+            )
+        else:
+            user_query = message.text.split(' ', 1)[1]
+            response_text = await get_llama_response(user_query)
+
+            end_time = time.time()
+            telegram_ping = str(round((end_time - start_time) * 1000, 3)) + " ms"
+            
+            await message.reply_text(
+                f"{response_text}\n\nAnswering by ➛  @Aashyan",
+                parse_mode=ParseMode.MARKDOWN
+            )
+    except Exception as e:
+        await message.reply_text(f"**Error: {e}**")
+
+# Handlers for ai, solve, gpt, ask commands using Mistral-7B-Instruct model
+@app.on_message(filters.command(["ai", "solve", "gpt", "ask"],  prefixes=["+", ".", "/", "-", "", "$","#","&"]))
+async def mistral_commands(bot, message):
+    try:
+        start_time = time.time()
+        await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
+
+        if len(message.command) < 2:
+            await message.reply_text(
+                f"Example:\n\n/{message.command[0]} Ask your question here"
+            )
+        else:
+            user_query = message.text.split(' ', 1)[1]
+            response_text = await get_mistral_response(user_query)
+
+            end_time = time.time()
+            telegram_ping = str(round((end_time - start_time) * 1000, 3)) + " ms"
+            
+            await message.reply_text(
+                f"{response_text}\n\nAnswering by ➛  @Aashyan",
+                parse_mode=ParseMode.MARKDOWN
+            )
+    except Exception as e:
+        await message.reply_text(f"**Error: {e}**")
